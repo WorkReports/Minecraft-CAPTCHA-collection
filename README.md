@@ -1,0 +1,1 @@
+# Minecraft CAPTCHA Bot
