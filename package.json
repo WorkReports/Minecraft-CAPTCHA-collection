@@ -1,7 +1,0 @@
-{
-  "dependencies": {
-    "flayercaptcha": "^1.0.1",
-    "mineflayer": "^4.27.0",
-    "sharp": "^0.34.1"
-  }
-}
