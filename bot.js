@@ -10,7 +10,7 @@ const http = require('http');
 const botOptions = {
   host: 'mc.angelmine.ru',
   port: 25565,
-  username: 'Joni91',
+  username: 'Joni1',
   version: '1.16.5'
 };
 
@@ -135,16 +135,54 @@ async function deleteExistingFileOnDropbox(fileName) {
   }
 }
 
-// Обновлённая функция для загрузки файла на Dropbox
+async function refreshAccessToken() {
+  const clientId = 'ВАШ_CLIENT_ID'; // Замените на ID вашего приложения
+  const clientSecret = 'ВАШ_CLIENT_SECRET'; // Замените на секретный ключ вашего приложения
+  const refreshToken = fs.readFileSync('./dropbox_refresh_token.txt', 'utf-8').trim();
+  
+  const tokenUrl = 'https://api.dropboxapi.com/oauth2/token';
+
+  try {
+    const response = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+        client_id: clientId,
+        client_secret: clientSecret
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Access Token успешно обновлён.');
+
+      // Сохраняем новый Access Token в файл
+      fs.writeFileSync('./dropbox_token.txt', data.access_token);
+      console.log('✅ Новый Access Token сохранён.');
+      return data.access_token; // Возвращаем новый токен
+    } else {
+      console.log(`❌ Ошибка обновления токена: ${await response.text()}`);
+      return null;
+    }
+  } catch (err) {
+    console.log(`⚠️ Ошибка при обновлении токена: ${err.message}`);
+    return null;
+  }
+}
+
 async function uploadToDropbox(filePath) {
-  const token = fs.readFileSync('./dropbox_token.txt', 'utf-8').trim();
+  let token = fs.readFileSync('./dropbox_token.txt', 'utf-8').trim();
   const uploadUrl = 'https://content.dropboxapi.com/2/files/upload';
 
   const fileData = fs.readFileSync(filePath);
   const fileName = filePath.split('/').pop();
 
   try {
-    // Проверить и удалить существующий файл
+    // Проверить и удалить существующий файл (используя текущий токен)
     await deleteExistingFileOnDropbox(fileName);
 
     // Загрузить новый файл
@@ -155,7 +193,7 @@ async function uploadToDropbox(filePath) {
         'Dropbox-API-Arg': JSON.stringify({
           path: `/${fileName}`,
           mode: 'add',
-          autorename: false, // Гарантирует точную замену
+          autorename: false,
           mute: false
         }),
         'Content-Type': 'application/octet-stream'
@@ -165,6 +203,37 @@ async function uploadToDropbox(filePath) {
 
     if (uploadResponse.ok) {
       console.log(`✅ Файл ${fileName} успешно загружен на Dropbox`);
+    } else if ((await uploadResponse.json()).error_summary.includes('expired_access_token')) {
+      console.log('🔄 Токен истёк, обновляю токен...');
+      
+      // Обновляем токен
+      token = await refreshAccessToken();
+      if (!token) {
+        console.log('❌ Не удалось обновить токен. Проверьте настройки.');
+        return;
+      }
+
+      // Повторная попытка загрузки файла с новым токеном
+      const retryResponse = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Dropbox-API-Arg': JSON.stringify({
+            path: `/${fileName}`,
+            mode: 'add',
+            autorename: false,
+            mute: false
+          }),
+          'Content-Type': 'application/octet-stream'
+        },
+        body: fileData
+      });
+
+      if (retryResponse.ok) {
+        console.log(`✅ Файл ${fileName} успешно загружен на Dropbox после обновления токена`);
+      } else {
+        console.log(`❌ Ошибка загрузки файла даже после обновления токена: ${await retryResponse.text()}`);
+      }
     } else {
       console.log(`❌ Ошибка загрузки файла на Dropbox: ${await uploadResponse.text()}`);
     }
@@ -199,7 +268,7 @@ function createBot() {
     setTimeout(() => {
       console.log('🔄 Перезапуск бота...');
       createBot();
-    }, 4000);
+    }, 3000);
   });
 
   bot.on('error', (err) => {
@@ -207,7 +276,7 @@ function createBot() {
     setTimeout(() => {
       console.log('❌ Перезапуск бота из-за ошибки...');
       createBot();
-    }, 4000);
+    }, 3000);
   });
 }
 
