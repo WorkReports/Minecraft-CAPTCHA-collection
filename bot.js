@@ -136,8 +136,8 @@ async function deleteExistingFileOnDropbox(fileName) {
 }
 
 async function refreshAccessToken() {
-  const clientId = 'ВАШ_CLIENT_ID'; // Замените на ID вашего приложения
-  const clientSecret = 'ВАШ_CLIENT_SECRET'; // Замените на секретный ключ вашего приложения
+  const clientId = '4jtg3ibmb0dq36a'; // Замените на ID вашего приложения
+  const clientSecret = '3h24ys657kkjk3s'; // Замените на секретный ключ вашего приложения
   const refreshToken = fs.readFileSync('./dropbox_refresh_token.txt', 'utf-8').trim();
   
   const tokenUrl = 'https://api.dropboxapi.com/oauth2/token';
