@@ -199,7 +199,7 @@ function createBot() {
     setTimeout(() => {
       console.log('🔄 Перезапуск бота...');
       createBot();
-    }, 3000);
+    }, 4000);
   });
 
   bot.on('error', (err) => {
@@ -207,7 +207,7 @@ function createBot() {
     setTimeout(() => {
       console.log('❌ Перезапуск бота из-за ошибки...');
       createBot();
-    }, 3000);
+    }, 4000);
   });
 }
 
